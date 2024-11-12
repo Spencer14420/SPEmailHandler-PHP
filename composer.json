@@ -1,0 +1,13 @@
+{
+    "name": "spencer14420/sp-php-email-handler",
+    "description": "A server-side PHP handler for contact forms. Handles form submissions, validates user inputs, sends emails to a mailbox, and sends confirmation emails to users.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "spencer14420"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {}
+}

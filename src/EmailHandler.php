@@ -1,6 +1,8 @@
 <?php
 namespace spencer14420\PhpEmailHandler;
 
+use PHPMailer\PHPMailer\PHPMailer;
+
 class EmailHandler
 {
     private $mailboxEmail;
@@ -69,18 +71,26 @@ class EmailHandler
         }
 
         // Prepare and send the main email to the mailbox
-        $headers = "From: {$this->siteName} <{$this->fromEmail}>\r\nReply-To: $email";
-        $body = "From: {$name} ({$email})\n\nMessage:\n" . wordwrap($message, 70);
-        $messageSent = mail($this->mailboxEmail, "Message from {$name} via {$this->siteDomain}", $body, $headers);
+        $inquryEmail = new PHPMailer();
 
-        if (!$messageSent) {
-            $this->jsonErrorResponse("Failed to send the message. Please try again later.", 500);
+        $inquryEmail->setFrom($this->fromEmail, $this->siteName);
+        $inquryEmail->addReplyTo($email);
+        $inquryEmail->addAddress($this->mailboxEmail, $this->siteName);
+        $inquryEmail->Subject = "Message from $name via $this->siteDomain";
+        $inquryEmail->Body = "From: {$name} ({$email})\n\nMessage:\n" . wordwrap($message, 70);
+
+        if (!$inquryEmail->send()) {
+            $this->jsonErrorResponse("Error: ". $inquryEmail->ErrorInfo, 500);
         }
 
         // Prepare and send the confirmation email to the sender
-        $headers = "From: {$this->siteName} <{$this->fromEmail}>\r\nReply-To: {$this->replyToEmail}";
-        $confirmationMessage = "Dear {$name} ({$email}),\n\nYour message (shown below) has been received. We will get back to you as soon as possible.\n\nSincerely,\n{$this->siteName}\n\nPlease note: This message was sent to the email address provided in our contact form. If you did not enter your email, please disregard this message.\n\nYour message:\n" . wordwrap($message, 70);
-        mail($email, "Your message to {$this->siteName} has been received", $confirmationMessage, $headers);
+        $confirmationEmail = new PHPMailer();
+        $confirmationEmail->setFrom($this->fromEmail, $this->siteName);
+        $confirmationEmail->addReplyTo($this->replyToEmail);
+        $confirmationEmail->addAddress($email);
+        $confirmationEmail->Subject = "Your message to $this->siteName has been received";
+        $confirmationEmail->Body = "Dear $name ($email),\n\nYour message (shown below) has been received. We will get back to you as soon as possible.\n\nSincerely,\n$this->siteName\n\nPlease note: This message was sent to the email address provided in our contact form. If you did not enter your email, please disregard this message.\n\nYour message:\n$message";
+        $confirmationEmail->send();
 
         echo json_encode(['status' => 'success']);
     }

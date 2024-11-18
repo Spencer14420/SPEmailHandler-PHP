@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "84b33ef1e0e22e297859977fc006ac94",
+    "content-hash": "cdef07242a7578cc1b3dde745ee26217",
     "packages": [
         {
             "name": "phpmailer/phpmailer",
@@ -86,15 +86,53 @@
                 }
             ],
             "time": "2024-10-09T10:07:50+00:00"
+        },
+        {
+            "name": "spencer14420/sp-anti-csrf",
+            "version": "1.0.0-alpha3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Spencer14420/SPAntiCSRF.git",
+                "reference": "f584adb34554d4ab5ca616200f44b8c39078def9"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Spencer14420/SPAntiCSRF/zipball/f584adb34554d4ab5ca616200f44b8c39078def9",
+                "reference": "f584adb34554d4ab5ca616200f44b8c39078def9",
+                "shasum": ""
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "spencer14420\\SpAntiCsrf\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "spencer14420"
+                }
+            ],
+            "description": "Can be used to generate and validate anti-CSRF tokens",
+            "support": {
+                "issues": "https://github.com/Spencer14420/SPAntiCSRF/issues",
+                "source": "https://github.com/Spencer14420/SPAntiCSRF/tree/1.0.0-alpha3"
+            },
+            "time": "2024-11-16T21:19:00+00:00"
         }
     ],
     "packages-dev": [],
     "aliases": [],
     "minimum-stability": "dev",
-    "stability-flags": [],
+    "stability-flags": {
+        "spencer14420/sp-anti-csrf": 15
+    },
     "prefer-stable": true,
     "prefer-lowest": false,
-    "platform": [],
-    "platform-dev": [],
+    "platform": {},
+    "platform-dev": {},
     "plugin-api-version": "2.6.0"
 }

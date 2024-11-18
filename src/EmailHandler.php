@@ -6,6 +6,7 @@ namespace spencer14420\PhpEmailHandler;
 
 use PHPMailer\PHPMailer\PHPMailer;
 use spencer14420\PhpEmailHandler\CaptchaVerifier;
+use spencer14420\SpAntiCsrf\AntiCsrf;
 
 class EmailHandler
 {
@@ -17,6 +18,8 @@ class EmailHandler
     private $captchaToken;
     private $captchaSecret;
     private $captchaVerifyURL;
+    private $checkCsrf;
+    private $csrfToken;
 
     public function __construct(string $configFile)
     {
@@ -38,6 +41,8 @@ class EmailHandler
         $this->captchaToken = $captchaToken;
         $this->captchaSecret = isset($captchaSecret) && !empty($captchaSecret) ? $captchaSecret : "";
         $this->captchaVerifyURL = isset($captchaVerifyURL) && !empty($captchaVerifyURL) && filter_var($captchaVerifyURL, FILTER_VALIDATE_URL) ? $captchaVerifyURL : "";
+        $this->checkCsrf = $checkCsrf ?? false;
+        $this->csrfToken = $csrfToken;
     }
 
     private function validateEmailVar(string $emailVar): void
@@ -68,6 +73,21 @@ class EmailHandler
             $captchaVerifier->verify($this->captchaToken, $_SERVER['REMOTE_ADDR']);
         } catch (\Exception $e) {
             $this->jsonErrorResponse($e->getMessage(), 403);
+        }
+    }
+
+    private function verifyCsrf(): void {
+        if (!$this->checkCsrf) {
+            return;
+        }
+
+        if (empty($this->csrfToken)) {
+            $this->jsonErrorResponse('Server error: $csrfToken does not exist or is not set.', 500);;
+        }
+
+        $csrfVerifier = new AntiCsrf();
+        if (!$csrfVerifier->tokenIsValid($_POST["tokenInputToken"])) {
+            $this->jsonErrorResponse("Error: There was a issue with your session. Please refresh the page and try again.", 403);
         }
     }
 

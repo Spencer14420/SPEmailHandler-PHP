@@ -22,7 +22,7 @@ class CaptchaVerifier
         }
 
         if (empty($token)) {
-            throw new \Exception('CAPTCHA verification failed: $token does not exist or is not set.');
+            throw new \Exception('CAPTCHA verification failed: $captchaToken does not exist or is not set.');
         }
 
         $data = [

@@ -11,7 +11,8 @@
   "minimum-stability": "dev",
   "prefer-stable": true,
   "require": {
-    "phpmailer/phpmailer": "^6.9"
+    "phpmailer/phpmailer": "^6.9",
+    "spencer14420/sp-anti-csrf": "^1.0@alpha"
   },
   "autoload": {
     "psr-4": {

@@ -12,10 +12,10 @@ class CaptchaVerifier
         $this->verifyUrl = $verifyUrl;
     }
 
-    public function verify(string $token, string $remoteIp): void
+    public function verify(string $token, string $remoteIp): bool
     {
         if (empty($this->secret) || empty($this->verifyUrl)) {
-            return; // Skip verification if CAPTCHA is not configured
+            return true; // Skip verification if CAPTCHA is not configured
         }
 
         $data = [
@@ -33,29 +33,17 @@ class CaptchaVerifier
         $response = curl_exec($curl);
 
         if (curl_errno($curl)) {
-            $this->jsonErrorResponse(
-                "Error: Could not verify CAPTCHA due to a network error.",
-                403
-            );
+            curl_close($curl);
+            throw new \Exception("CAPTCHA verification failed due to a network error: " . curl_error($curl));
         }
 
         $responseData = json_decode($response, true);
         curl_close($curl);
 
         if (!empty($responseData['error-codes'])) {
-            $this->jsonErrorResponse(
-                "Error: CAPTCHA verification failed.",
-                403,
-                ['captchaErrors' => $responseData['error-codes']]
-            );
+            throw new \Exception("CAPTCHA verification failed: " . implode(", ", $responseData['error-codes']));
         }
-    }
 
-    private function jsonErrorResponse(string $message, int $code, array $additionalData = []): void
-    {
-        http_response_code($code);
-        $response = array_merge(['status' => 'error', 'message' => $message], $additionalData);
-        echo json_encode($response);
-        exit;
+        return isset($responseData['success']) && $responseData['success'] === true;
     }
 }

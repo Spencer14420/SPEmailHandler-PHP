@@ -60,8 +60,12 @@ class EmailHandler
 
     private function verifyCaptcha(): void
     {
-        $captchaVerifier = new CaptchaVerifier($this->captchaSecret, $this->captchaVerifyURL);
-        $captchaVerifier->verify($this->captchaToken, $_SERVER['REMOTE_ADDR']);
+        try {
+            $captchaVerifier = new CaptchaVerifier($this->captchaSecret, $this->captchaVerifyURL);
+            $captchaVerifier->verify($this->captchaToken, $_SERVER['REMOTE_ADDR']);
+        } catch (\Exception $e) {
+            $this->jsonErrorResponse($e->getMessage(), 403);
+        }
     }
 
     private function sendEmail(

@@ -15,7 +15,7 @@ A PHP package for handling contact form submissions. Features include:
 All required libraries are bundled with this package, including:
 
 - [PHPMailer](https://github.com/PHPMailer/PHPMailer) for email sending
-- [spencer14420\SpAntiCsrf](https://github.com/spencer14420/spanticcsrf) for CSRF protection
+- [spencer14420\SpAntiCsrf](https://github.com/spencer14420/SPAntiCSRF) for CSRF protection
 
 ## Installation
 

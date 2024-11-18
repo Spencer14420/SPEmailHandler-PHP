@@ -1,7 +1,12 @@
 <?php
+
+declare(strict_types=1);
+
 namespace spencer14420\PhpEmailHandler;
 
 use PHPMailer\PHPMailer\PHPMailer;
+use spencer14420\PhpEmailHandler\CaptchaVerifier;
+use spencer14420\SpAntiCsrf\AntiCsrf;
 
 class EmailHandler
 {
@@ -10,8 +15,13 @@ class EmailHandler
     private $replyToEmail;
     private $siteDomain;
     private $siteName;
+    private $captchaToken;
+    private $captchaSecret;
+    private $captchaVerifyURL;
+    private $checkCsrf;
+    private $csrfToken;
 
-    public function __construct($configFile)
+    public function __construct(string $configFile)
     {
         require_once $configFile;
 
@@ -28,69 +38,123 @@ class EmailHandler
         $this->replyToEmail = $replyToEmail;
         $this->siteDomain = isset($siteDomain) && !empty($siteDomain) ? $siteDomain : $_SERVER['HTTP_HOST'];
         $this->siteName = isset($siteName) && !empty($siteName) ? $siteName : ucfirst(explode('.', $this->siteDomain)[0]);
+        $this->captchaToken = $captchaToken;
+        $this->captchaSecret = isset($captchaSecret) && !empty($captchaSecret) ? $captchaSecret : "";
+        $this->captchaVerifyURL = isset($captchaVerifyURL) && !empty($captchaVerifyURL) && filter_var($captchaVerifyURL, FILTER_VALIDATE_URL) ? $captchaVerifyURL : "";
+        $this->checkCsrf = $checkCsrf ?? false;
+        $this->csrfToken = $csrfToken;
     }
 
-    private function validateEmailVar($emailVar)
+    private function validateEmailVar(string $emailVar): void
     {
         if (!isset($emailVar) || empty($emailVar) || !filter_var($emailVar, FILTER_VALIDATE_EMAIL)) {
             $this->jsonErrorResponse("Error: Server configuration error.", 500);
         }
     }
 
-    private function setDefaultEmailIfEmpty(&$emailVar, $defaultEmail)
+    private function setDefaultEmailIfEmpty(string &$emailVar, string $defaultEmail): void
     {
         if (!isset($emailVar) || empty($emailVar)) {
             $emailVar = $defaultEmail;
         }
     }
 
-    private function jsonErrorResponse($message = "An error occurred. Please try again later.", $code = 500)
+    private function jsonErrorResponse(string $message = "An error occurred. Please try again later.", int $code = 500): void
     {
         http_response_code($code);
         echo json_encode(['status' => 'error', 'message' => $message]);
         exit;
     }
 
-    public function handleRequest()
+    private function verifyCaptcha(): void
+    {
+        try {
+            $captchaVerifier = new CaptchaVerifier($this->captchaSecret, $this->captchaVerifyURL);
+            $captchaVerifier->verify($this->captchaToken, $_SERVER['REMOTE_ADDR']);
+        } catch (\Exception $e) {
+            $this->jsonErrorResponse($e->getMessage(), 403);
+        }
+    }
+
+    private function verifyCsrf(): void {
+        if (!$this->checkCsrf) {
+            return;
+        }
+
+        if (empty($this->csrfToken)) {
+            $this->jsonErrorResponse('Server error: $csrfToken does not exist or is not set.', 500);;
+        }
+
+        $csrfVerifier = new AntiCsrf();
+        if (!$csrfVerifier->tokenIsValid($this->csrfToken)) {
+            $this->jsonErrorResponse("Error: There was a issue with your session. Please refresh the page and try again.", 403);
+        }
+    }
+
+    private function sendEmail(
+        PHPMailer $email,
+        string $from,
+        string $to,
+        string $subject,
+        string $body,
+        string $replyTo = null
+    ): void {
+        $email->setFrom($from, $this->siteName);
+        $email->addAddress($to);
+        $email->Subject = $subject;
+        $email->Body = $body;
+
+        if ($replyTo) {
+            $email->addReplyTo($replyTo);
+        }
+
+        if (!$email->send()) {
+            $this->jsonErrorResponse("Error: " . $email->ErrorInfo, 500);
+        }
+    }
+
+
+    public function handleRequest(): void
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->jsonErrorResponse("Error: Method not allowed", 405);
         }
+
+        $this->verifyCaptcha();
+        $this->verifyCsrf();
 
         // Sanitize user inputs
         $email = filter_var($_POST["email"] ?? "", FILTER_SANITIZE_EMAIL);
         $message = htmlspecialchars($_POST["message"] ?? "");
         $name = htmlspecialchars($_POST["name"] ?? "somebody");
 
+        //Errors
         if (empty($email) || empty($message)) {
             $this->jsonErrorResponse("Error: Missing required fields.", 422);
         }
-
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $this->jsonErrorResponse("Error: Invalid email address.", 422);
         }
 
         // Prepare and send the main email to the mailbox
-        $inquryEmail = new PHPMailer();
-
-        $inquryEmail->setFrom($this->fromEmail, $this->siteName);
-        $inquryEmail->addReplyTo($email);
-        $inquryEmail->addAddress($this->mailboxEmail, $this->siteName);
-        $inquryEmail->Subject = "Message from $name via $this->siteDomain";
-        $inquryEmail->Body = "From: {$name} ({$email})\n\nMessage:\n" . wordwrap($message, 70);
-
-        if (!$inquryEmail->send()) {
-            $this->jsonErrorResponse("Error: ". $inquryEmail->ErrorInfo, 500);
-        }
+        $this->sendEmail(
+            new PHPMailer(),
+            $this->fromEmail,
+            $this->mailboxEmail,
+            "Message from $name via $this->siteDomain",
+            "From: {$name} ({$email})\n\nMessage:\n" . wordwrap($message, 70),
+            $email
+        );
 
         // Prepare and send the confirmation email to the sender
-        $confirmationEmail = new PHPMailer();
-        $confirmationEmail->setFrom($this->fromEmail, $this->siteName);
-        $confirmationEmail->addReplyTo($this->replyToEmail);
-        $confirmationEmail->addAddress($email);
-        $confirmationEmail->Subject = "Your message to $this->siteName has been received";
-        $confirmationEmail->Body = "Dear $name ($email),\n\nYour message (shown below) has been received. We will get back to you as soon as possible.\n\nSincerely,\n$this->siteName\n\nPlease note: This message was sent to the email address provided in our contact form. If you did not enter your email, please disregard this message.\n\nYour message:\n$message";
-        $confirmationEmail->send();
+        $this->sendEmail(
+            new PHPMailer(),
+            $this->fromEmail,
+            $email,
+            "Your message to $this->siteName has been received",
+            "Dear $name ($email),\n\nYour message (shown below) has been received. We will get back to you as soon as possible.\n\nSincerely,\n$this->siteName\n\nPlease note: This message was sent to the email address provided in our contact form. If you did not enter your email, please disregard this message.\n\nYour message:\n$message",
+            $this->replyToEmail
+        );
 
         echo json_encode(['status' => 'success']);
     }

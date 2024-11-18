@@ -21,6 +21,10 @@ class CaptchaVerifier
             return true; // Skip verification if CAPTCHA is not configured
         }
 
+        if (empty($token)) {
+            throw new \Exception('CAPTCHA verification failed: $token does not exist');
+        }
+
         $data = [
             "secret" => $this->secret,
             "response" => $token,

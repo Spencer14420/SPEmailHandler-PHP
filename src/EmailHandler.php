@@ -15,7 +15,7 @@ class EmailHandler
     private $captchaSecret;
     private $captchaVerifyURL;
 
-    public function __construct($configFile)
+    public function __construct(string $configFile)
     {
         require_once $configFile;
 
@@ -37,35 +37,41 @@ class EmailHandler
         $this->captchaVerifyURL = isset($captchaVerifyURL) && !empty($captchaVerifyURL) && filter_var($captchaVerifyURL, FILTER_VALIDATE_URL) ? $captchaVerifyURL : "";
     }
 
-    private function validateEmailVar($emailVar)
+    private function validateEmailVar(string $emailVar): void
     {
         if (!isset($emailVar) || empty($emailVar) || !filter_var($emailVar, FILTER_VALIDATE_EMAIL)) {
             $this->jsonErrorResponse("Error: Server configuration error.", 500);
         }
     }
 
-    private function setDefaultEmailIfEmpty(&$emailVar, $defaultEmail)
+    private function setDefaultEmailIfEmpty(string &$emailVar, string $defaultEmail): void
     {
         if (!isset($emailVar) || empty($emailVar)) {
             $emailVar = $defaultEmail;
         }
     }
 
-    private function jsonErrorResponse($message = "An error occurred. Please try again later.", $code = 500)
+    private function jsonErrorResponse(string $message = "An error occurred. Please try again later.", int $code = 500): void
     {
         http_response_code($code);
         echo json_encode(['status' => 'error', 'message' => $message]);
         exit;
     }
 
-    private function verifyCaptcha()
+    private function verifyCaptcha(): void
     {
         $captchaVerifier = new CaptchaVerifier($this->captchaSecret, $this->captchaVerifyURL);
         $captchaVerifier->verify($this->captchaToken, $_SERVER['REMOTE_ADDR']);
     }
 
-    private function sendEmail(PHPMailer $email, string $from, string $to, string $subject, string $body, string $replyTo = null)
-    {
+    private function sendEmail(
+        PHPMailer $email,
+        string $from,
+        string $to,
+        string $subject,
+        string $body,
+        string $replyTo = null
+    ): void {
         $email->setFrom($from, $this->siteName);
         $email->addAddress($to);
         $email->Subject = $subject;
@@ -81,7 +87,7 @@ class EmailHandler
     }
 
 
-    public function handleRequest()
+    public function handleRequest(): void
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->jsonErrorResponse("Error: Method not allowed", 405);

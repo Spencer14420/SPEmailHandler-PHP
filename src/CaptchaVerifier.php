@@ -6,13 +6,13 @@ class CaptchaVerifier
     private $secret;
     private $verifyUrl;
 
-    public function __construct($secret, $verifyUrl)
+    public function __construct(string $secret, string $verifyUrl)
     {
         $this->secret = $secret;
         $this->verifyUrl = $verifyUrl;
     }
 
-    public function verify($token, $remoteIp)
+    public function verify(string $token, string $remoteIp): void
     {
         if (empty($this->secret) || empty($this->verifyUrl)) {
             return; // Skip verification if CAPTCHA is not configured
@@ -51,7 +51,7 @@ class CaptchaVerifier
         }
     }
 
-    private function jsonErrorResponse($message, $code, $additionalData = [])
+    private function jsonErrorResponse(string $message, int $code, array $additionalData = []): void
     {
         http_response_code($code);
         $response = array_merge(['status' => 'error', 'message' => $message], $additionalData);

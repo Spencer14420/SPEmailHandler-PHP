@@ -131,7 +131,8 @@ class EmailHandler
             $this->fromEmail,
             $email,
             "Your message to $this->siteName has been received",
-            "Dear $name ($email),\n\nYour message has been received."
+            "Dear $name ($email),\n\nYour message has been received.",
+            $this->replyToEmail
         );
 
         echo json_encode(['status' => 'success']);

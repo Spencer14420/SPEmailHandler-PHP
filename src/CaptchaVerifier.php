@@ -15,14 +15,14 @@ class CaptchaVerifier
         $this->verifyUrl = $verifyUrl;
     }
 
-    public function verify(string $token, string $remoteIp): bool
+    public function verify(?string $token, string $remoteIp): bool
     {
         if (empty($this->secret) || empty($this->verifyUrl)) {
             return true; // Skip verification if CAPTCHA is not configured
         }
 
         if (empty($token)) {
-            throw new \Exception('CAPTCHA verification failed: $token does not exist');
+            throw new \Exception('CAPTCHA verification failed: $token does not exist or is not set.');
         }
 
         $data = [

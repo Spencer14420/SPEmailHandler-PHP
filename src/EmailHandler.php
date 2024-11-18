@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 namespace spencer14420\PhpEmailHandler;
 
 use PHPMailer\PHPMailer\PHPMailer;

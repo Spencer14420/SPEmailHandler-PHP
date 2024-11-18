@@ -86,7 +86,7 @@ class EmailHandler
         }
 
         $csrfVerifier = new AntiCsrf();
-        if (!$csrfVerifier->tokenIsValid($_POST["tokenInputToken"])) {
+        if (!$csrfVerifier->tokenIsValid($this->csrfToken)) {
             $this->jsonErrorResponse("Error: There was a issue with your session. Please refresh the page and try again.", 403);
         }
     }
@@ -121,6 +121,7 @@ class EmailHandler
         }
 
         $this->verifyCaptcha();
+        $this->verifyCsrf();
 
         // Sanitize user inputs
         $email = filter_var($_POST["email"] ?? "", FILTER_SANITIZE_EMAIL);

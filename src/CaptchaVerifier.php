@@ -9,7 +9,7 @@ class CaptchaVerifier
     private $secret;
     private $verifyUrl;
 
-    public function __construct(string $secret, string $verifyUrl)
+    public function __construct(?string $secret, ?string $verifyUrl)
     {
         $this->secret = $secret;
         $this->verifyUrl = $verifyUrl;

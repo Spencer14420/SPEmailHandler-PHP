@@ -25,38 +25,32 @@ class EmailHandler
     {
         require_once $configFile;
 
-        // Validate email variables
-        $this->validateEmailVar($mailboxEmail);
-        $this->setDefaultEmailIfEmpty($fromEmail, $mailboxEmail);
-        $this->validateEmailVar($fromEmail);
-        $this->setDefaultEmailIfEmpty($replyToEmail, $mailboxEmail);
-        $this->validateEmailVar($replyToEmail);
+        // Set default and validate email variables
+        $this->mailboxEmail = $this->validateAndSetEmail($mailboxEmail);
+        $this->fromEmail = $this->validateAndSetEmail($fromEmail, $this->mailboxEmail);
+        $this->replyToEmail = $this->validateAndSetEmail($replyToEmail, $this->mailboxEmail);
 
         // Set the properties
-        $this->mailboxEmail = $mailboxEmail;
-        $this->fromEmail = $fromEmail;
-        $this->replyToEmail = $replyToEmail;
-        $this->siteDomain = isset($siteDomain) && !empty($siteDomain) ? $siteDomain : $_SERVER['HTTP_HOST'];
-        $this->siteName = isset($siteName) && !empty($siteName) ? $siteName : ucfirst(explode('.', $this->siteDomain)[0]);
+        $this->siteDomain = $siteDomain ?? $_SERVER['HTTP_HOST'];
+        $this->siteName = $siteName ?? ucfirst(explode('.', $this->siteDomain)[0]);
         $this->captchaToken = $captchaToken;
-        $this->captchaSecret = isset($captchaSecret) && !empty($captchaSecret) ? $captchaSecret : "";
-        $this->captchaVerifyURL = isset($captchaVerifyURL) && !empty($captchaVerifyURL) && filter_var($captchaVerifyURL, FILTER_VALIDATE_URL) ? $captchaVerifyURL : "";
+        $this->captchaSecret = $captchaSecret ?? "";
+        $this->captchaVerifyURL = (isset($captchaVerifyURL) && filter_var($captchaVerifyURL, FILTER_VALIDATE_URL)) ? $captchaVerifyURL : "";
         $this->checkCsrf = $checkCsrf ?? false;
         $this->csrfToken = $csrfToken;
     }
 
-    private function validateEmailVar(string $emailVar): void
+    private function validateAndSetEmail(?string $emailVar, string $defaultEmail = null): string
     {
-        if (!isset($emailVar) || empty($emailVar) || !filter_var($emailVar, FILTER_VALIDATE_EMAIL)) {
-            $this->jsonErrorResponse("Error: Server configuration error.", 500);
-        }
-    }
-
-    private function setDefaultEmailIfEmpty(string &$emailVar, string $defaultEmail): void
-    {
-        if (!isset($emailVar) || empty($emailVar)) {
+        if (empty($emailVar) && $defaultEmail) {
             $emailVar = $defaultEmail;
         }
+        
+        if (empty($emailVar) || !filter_var($emailVar, FILTER_VALIDATE_EMAIL)) {
+            $this->jsonErrorResponse("Error: Server configuration error.", 500);
+        }
+        
+        return $emailVar;
     }
 
     private function jsonErrorResponse(string $message = "An error occurred. Please try again later.", int $code = 500): void

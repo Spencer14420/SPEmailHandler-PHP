@@ -33,14 +33,14 @@ class EmailHandler
         // Set the properties
         $this->siteDomain = $siteDomain ?? $_SERVER['HTTP_HOST'];
         $this->siteName = $siteName ?? ucfirst(explode('.', $this->siteDomain)[0]);
-        $this->captchaToken = $captchaToken;
-        $this->captchaSecret = $captchaSecret ?? "";
-        $this->captchaVerifyURL = (isset($captchaVerifyURL) && filter_var($captchaVerifyURL, FILTER_VALIDATE_URL)) ? $captchaVerifyURL : "";
+        $this->captchaToken = $captchaToken ?? null;
+        $this->captchaSecret = $captchaSecret ?? null;
+        $this->captchaVerifyURL = !empty($captchaVerifyURL) && filter_var($captchaVerifyURL, FILTER_VALIDATE_URL) ? $captchaVerifyURL : null;
         $this->checkCsrf = $checkCsrf ?? false;
-        $this->csrfToken = $csrfToken;
+        $this->csrfToken = $csrfToken ?? null;
     }
 
-    private function validateAndSetEmail(?string $emailVar, string $defaultEmail = null): string
+    private function validateAndSetEmail(string $emailVar, ?string $defaultEmail = null): string
     {
         if (empty($emailVar) && $defaultEmail) {
             $emailVar = $defaultEmail;
@@ -76,7 +76,7 @@ class EmailHandler
         }
 
         if (empty($this->csrfToken)) {
-            $this->jsonErrorResponse('Server error: $csrfToken does not exist or is not set.', 500);;
+            $this->jsonErrorResponse('Server error: $csrfToken does not exist or is not set.', 500);
         }
 
         $csrfVerifier = new AntiCsrf();
@@ -91,7 +91,7 @@ class EmailHandler
         string $to,
         string $subject,
         string $body,
-        string $replyTo = null
+        ?string $replyTo = null
     ): void {
         $email->setFrom($from, $this->siteName);
         $email->addAddress($to);

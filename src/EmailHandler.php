@@ -26,9 +26,9 @@ class EmailHandler
         require_once $configFile;
 
         // Set default and validate email variables
-        $this->mailboxEmail = $this->validateAndSetEmail($mailboxEmail);
-        $this->fromEmail = $this->validateAndSetEmail($fromEmail, $this->mailboxEmail);
-        $this->replyToEmail = $this->validateAndSetEmail($replyToEmail, $this->mailboxEmail);
+        $this->mailboxEmail = $this->validateAndSetEmail($mailboxEmail, '$mailboxEmail');
+        $this->fromEmail = $this->validateAndSetEmail($fromEmail, '$fromEmail', $this->mailboxEmail);
+        $this->replyToEmail = $this->validateAndSetEmail($replyToEmail, '$replyToEmail', $this->mailboxEmail);
 
         // Set the properties
         $this->siteDomain = $siteDomain ?? $_SERVER['HTTP_HOST'];
@@ -40,14 +40,14 @@ class EmailHandler
         $this->csrfToken = $csrfToken ?? null;
     }
 
-    private function validateAndSetEmail(string $emailVar, ?string $defaultEmail = null): string
+    private function validateAndSetEmail(string $emailVar, string $emailVarName = "A configuration variable", ?string $defaultEmail = null): string
     {
         if (empty($emailVar) && $defaultEmail) {
             $emailVar = $defaultEmail;
         }
         
         if (empty($emailVar) || !filter_var($emailVar, FILTER_VALIDATE_EMAIL)) {
-            $this->jsonErrorResponse("Error: Server configuration error.", 500);
+            $this->jsonErrorResponse("Server error: {$emailVarName} is not set or is invalid.", 500);
         }
         
         return $emailVar;

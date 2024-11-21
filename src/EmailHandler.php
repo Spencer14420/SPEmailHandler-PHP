@@ -18,6 +18,7 @@ class EmailHandler
     private $captchaToken;
     private $captchaSecret;
     private $captchaVerifyURL;
+    private $captchaVerifier;
     private $checkCsrf;
     private $csrfToken;
 
@@ -31,13 +32,14 @@ class EmailHandler
         $this->replyToEmail = $this->validateAndSetEmail($replyToEmail, '$replyToEmail', $this->mailboxEmail);
 
         // Set the properties
-        $this->siteDomain = $siteDomain ?? $_SERVER['HTTP_HOST'];
-        $this->siteName = $siteName ?? ucfirst(explode('.', $this->siteDomain)[0]);
+        $this->siteDomain = $siteDomain ?? filter_var($_SERVER['HTTP_HOST'], FILTER_SANITIZE_URL);
+        $this->siteName = $siteName ?? ucfirst(explode('.', $this->siteDomain)[0]); // Capitalized domain without TLD
         $this->captchaToken = $captchaToken ?? null;
         $this->captchaSecret = $captchaSecret ?? null;
-        $this->captchaVerifyURL = !empty($captchaVerifyURL) && filter_var($captchaVerifyURL, FILTER_VALIDATE_URL) ? $captchaVerifyURL : null;
+        $this->captchaVerifyURL = filter_var($captchaVerifyURL, FILTER_VALIDATE_URL) ?: null;
         $this->checkCsrf = $checkCsrf ?? false;
         $this->csrfToken = $csrfToken ?? null;
+        $this->captchaVerifier = new CaptchaVerifier($this->captchaSecret, $this->captchaVerifyURL);
     }
 
     private function validateAndSetEmail(string $emailVar, string $emailVarName = "A configuration variable", ?string $defaultEmail = null): string
@@ -47,7 +49,7 @@ class EmailHandler
         }
         
         if (empty($emailVar) || !filter_var($emailVar, FILTER_VALIDATE_EMAIL)) {
-            $this->jsonErrorResponse("Server error: {$emailVarName} is not set or is invalid.", 500);
+            $this->jsonErrorResponse("Server error: {$emailVarName} is not set or is invalid.");
         }
         
         return $emailVar;
@@ -63,25 +65,25 @@ class EmailHandler
     private function verifyCaptcha(): void
     {
         try {
-            $captchaVerifier = new CaptchaVerifier($this->captchaSecret, $this->captchaVerifyURL);
-            $captchaVerifier->verify($this->captchaToken, $_SERVER['REMOTE_ADDR']);
+            $this->captchaVerifier->verify($this->captchaToken, $_SERVER['REMOTE_ADDR']);
         } catch (\Exception $e) {
             $this->jsonErrorResponse($e->getMessage(), 403);
         }
     }
 
-    private function verifyCsrf(): void {
+    private function verifyCsrf(): void
+    {
         if (!$this->checkCsrf) {
             return;
         }
 
         if (empty($this->csrfToken)) {
-            $this->jsonErrorResponse('Server error: $csrfToken does not exist or is not set.', 500);
+            $this->jsonErrorResponse('Server error: $csrfToken does not exist or is not set.');
         }
 
         $csrfVerifier = new AntiCsrf();
         if (!$csrfVerifier->tokenIsValid($this->csrfToken)) {
-            $this->jsonErrorResponse("Error: There was a issue with your session. Please refresh the page and try again.", 403);
+            $this->jsonErrorResponse("Error: There was an issue with your session. Please refresh the page and try again.", 403);
         }
     }
 
@@ -103,7 +105,7 @@ class EmailHandler
         }
 
         if (!$email->send()) {
-            $this->jsonErrorResponse("Error: " . $email->ErrorInfo, 500);
+            $this->jsonErrorResponse("Error: " . $email->ErrorInfo);
         }
     }
 
@@ -122,7 +124,6 @@ class EmailHandler
         $message = htmlspecialchars($_POST["message"] ?? "");
         $name = htmlspecialchars($_POST["name"] ?? "somebody");
 
-        //Errors
         if (empty($email) || empty($message)) {
             $this->jsonErrorResponse("Error: Missing required fields.", 422);
         }

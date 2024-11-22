@@ -57,6 +57,13 @@ class EmailHandler
 
     private function jsonErrorResponse(string $message = "An error occurred. Please try again later.", int $code = 500): void
     {
+        // Default to 'production' if APP_ENV is not set
+        $appEnv = getenv('APP_ENV') ?: 'production';
+
+        if ($appEnv === 'testing') {
+            throw new \RuntimeException($message, $code);
+        }
+
         http_response_code($code);
         echo json_encode(['status' => 'error', 'message' => $message]);
         exit;

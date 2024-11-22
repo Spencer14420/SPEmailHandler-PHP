@@ -9,6 +9,8 @@ use spencer14420\PhpEmailHandler\CaptchaVerifier;
 use spencer14420\SpAntiCsrf\AntiCsrf;
 use Exception;
 
+putenv('APP_ENV=testing');
+
 final class EmailHandlerTest extends TestCase
 {
    public function testConstructorValidConfigFile(): void 
@@ -30,7 +32,7 @@ final class EmailHandlerTest extends TestCase
    }
 
    public function testValidateAndSetEmail(): void 
-   {
+    {
         $configFile = __DIR__ . '/test_config.php';
         file_put_contents($configFile, '<?php $mailboxEmail = "test@mail.com"; $fromEmail = "from@mail.com";');
 
@@ -41,11 +43,12 @@ final class EmailHandlerTest extends TestCase
         $result = $method->invoke($emailHandler, 'valid@mail.com', 'Test Email');
         $this->assertEquals('valid@mail.com', $result);
 
-        $this->expectException(Exception::class);
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage("Server error: Test Email is not set or is invalid.");
         $method->invoke($emailHandler, 'invalidemail', 'Test Email');
 
         unlink($configFile);
-   }
+}
 
    public function testJsonErrorResponse(): void
    {

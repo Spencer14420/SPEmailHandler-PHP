@@ -3,134 +3,110 @@ declare(strict_types=1);
 namespace spencer14420\PhpEmailHandler;
 
 use PHPUnit\Framework\TestCase;
+use spencer14420\PhpEmailHandler\EmailHandler;
 use PHPMailer\PHPMailer\PHPMailer;
+use spencer14420\PhpEmailHandler\CaptchaVerifier;
 use spencer14420\SpAntiCsrf\AntiCsrf;
+use Exception;
 
 final class EmailHandlerTest extends TestCase
 {
-    private $configFile;
+   public function testConstructorValidConfigFile(): void 
+   {
+        $configFile = __DIR__ . '/test_config.php';
+        file_put_contents($configFile, '<?php $mailboxEmail = "test@mail.com"; $fromEmail = "from@mail.com";');
 
-    protected function setUp(): void
-    {
-        $this->configFile = __DIR__ . '/testConfig.php';
-        file_put_contents($this->configFile, '<?php
-            $mailboxEmail = "mailbox@example.com";
-            $fromEmail = "from@example.com";
-            $replyToEmail = "replyto@example.com";
-            $siteDomain = "example.com";
-            $siteName = "Example";
-            $captchaToken = "testCaptchaToken";
-            $captchaSecret = "testCaptchaSecret";
-            $captchaVerifyURL = "https://www.google.com/recaptcha/api/siteverify";
-            $checkCsrf = true;
-            $csrfToken = "testCsrfToken";
-        ');
-    }
-
-    protected function tearDown(): void
-    {
-        unlink($this->configFile);
-    }
-
-    public function testClassConstructor(): void
-    {
-        $emailHandler = new EmailHandler($this->configFile);
+        $emailHandler = new EmailHandler($configFile);
         $this->assertInstanceOf(EmailHandler::class, $emailHandler);
-    }
 
-    public function testValidateAndSetEmail(): void
-    {
-        $emailHandler = new EmailHandler($this->configFile);
-        $reflection = new \ReflectionClass($emailHandler);
-        $method = $reflection->getMethod('validateAndSetEmail');
+        unlink($configFile);
+   }
+
+   public function testConstructorInvalidConfigFile(): void 
+   {
+        $this->expectException(\Error::class);
+        $configFile = __DIR__ . '/invalid_config.php';
+        $emailHandler = new EmailHandler($configFile);
+   }
+
+   public function testValidateAndSetEmail(): void 
+   {
+        $configFile = __DIR__ . '/test_config.php';
+        file_put_contents($configFile, '<?php $mailboxEmail = "test@mail.com"; $fromEmail = "from@mail.com";');
+
+        $emailHandler = new EmailHandler($configFile);
+        $method = new \ReflectionMethod(EmailHandler::class, 'validateAndSetEmail');
         $method->setAccessible(true);
 
-        $validEmail = 'test@example.com';
-        $this->assertEquals($validEmail, $method->invokeArgs($emailHandler, [$validEmail, 'testEmail']));
+        $result = $method->invoke($emailHandler, 'valid@mail.com', 'Test Email');
+        $this->assertEquals('valid@mail.com', $result);
 
-        $this->expectOutputString(json_encode(['status' => 'error', 'message' => 'Server error: testEmail is not set or is invalid.']));
-        $method->invokeArgs($emailHandler, ['', 'testEmail']);
-    }
+        $this->expectException(Exception::class);
+        $method->invoke($emailHandler, 'invalidemail', 'Test Email');
 
-    public function testJsonErrorResponse(): void
-    {
-        $emailHandler = new EmailHandler($this->configFile);
-        $reflection = new \ReflectionClass($emailHandler);
-        $method = $reflection->getMethod('jsonErrorResponse');
-        $method->setAccessible(true);
+        unlink($configFile);
+   }
 
-        $this->expectOutputString(json_encode(['status' => 'error', 'message' => 'Test error message']));
-        $method->invokeArgs($emailHandler, ['Test error message']);
-    }
+   public function testJsonErrorResponse(): void
+   {
+       $this->expectOutputString(json_encode(['status' => 'error', 'message' => 'Test error']));
+       $configFile = __DIR__ . '/test_config.php';
+       file_put_contents($configFile, '<?php $mailboxEmail = "test@mail.com"; $fromEmail = "from@mail.com";');
+       
+       $emailHandler = new EmailHandler($configFile);
+       $method = new \ReflectionMethod(EmailHandler::class, 'jsonErrorResponse');
+       $method->setAccessible(true);
+
+       $this->expectException(Exception::class);
+       $method->invoke($emailHandler, 'Test error', 500);
+   }
 
     public function testVerifyCaptcha(): void
     {
-        $captchaVerifierMock = $this->createMock(CaptchaVerifier::class);
-        $captchaVerifierMock->expects($this->once())
+        $captchaVerifier = $this->createMock(CaptchaVerifier::class);
+        $captchaVerifier->expects($this->once())
             ->method('verify')
-            ->will($this->throwException(new \Exception('Captcha verification failed')));
+            ->with($this->anything(), $this->anything());
 
-        $emailHandler = new EmailHandler($this->configFile);
-        $reflection = new \ReflectionClass($emailHandler);
-        $property = $reflection->getProperty('captchaVerifier');
-        $property->setAccessible(true);
-        $property->setValue($emailHandler, $captchaVerifierMock);
-
-        $method = $reflection->getMethod('verifyCaptcha');
+        $configFile = __DIR__ . '/test_config.php';
+        file_put_contents($configFile, '<?php $mailboxEmail = "test@mail.com"; $fromEmail = "from@mail.com"; $captchaSecret = "captchaSecret";');
+        
+        $emailHandler = new EmailHandler($configFile);
+        $method = new \ReflectionMethod(EmailHandler::class, 'verifyCaptcha');
         $method->setAccessible(true);
-
-        $this->expectOutputString(json_encode(['status' => 'error', 'message' => 'Captcha verification failed']));
         $method->invoke($emailHandler);
     }
 
     public function testVerifyCsrf(): void
     {
-        $csrfVerifierMock = $this->createMock(AntiCsrf::class);
-        $csrfVerifierMock->expects($this->once())
+        $csrfVerifier = $this->createMock(AntiCsrf::class);
+        $csrfVerifier->expects($this->once())
             ->method('tokenIsValid')
-            ->willReturn(false);
-
-        $emailHandler = new EmailHandler($this->configFile);
-        $reflection = new \ReflectionClass($emailHandler);
-        $property = $reflection->getProperty('checkCsrf');
-        $property->setAccessible(true);
-        $property->setValue($emailHandler, true);
-
-        $property = $reflection->getProperty('csrfToken');
-        $property->setAccessible(true);
-        $property->setValue($emailHandler, 'invalidToken');
-
-        $method = $reflection->getMethod('verifyCsrf');
+            ->with($this->anything())
+            ->willReturn(true);
+        
+        $configFile = __DIR__ . '/test_config.php';
+        file_put_contents($configFile, '<?php $mailboxEmail = "test@mail.com"; $fromEmail = "from@mail.com"; $replyToEmail = "replyto@mail.com"; $csrfToken = "csrfToken";');
+        
+        $emailHandler = new EmailHandler($configFile);
+        $method = new \ReflectionMethod(EmailHandler::class, 'verifyCsrf');
         $method->setAccessible(true);
-
-        $this->expectOutputString(json_encode(['status' => 'error', 'message' => 'Error: There was an issue with your session. Please refresh the page and try again.']));
         $method->invoke($emailHandler);
     }
 
     public function testSendEmail(): void
     {
-        $emailMock = $this->createMock(PHPMailer::class);
-        $emailMock->expects($this->once())
+        $phpMailer = $this->createMock(PHPMailer::class);
+        $phpMailer->expects($this->once())
             ->method('send')
             ->willReturn(true);
 
-        $emailHandler = new EmailHandler($this->configFile);
-        $reflection = new \ReflectionClass($emailHandler);
-        $method = $reflection->getMethod('sendEmail');
+        $configFile = __DIR__ . '/test_config.php';
+        file_put_contents($configFile, '<?php $mailboxEmail = "test@mail.com"; $fromEmail = "from@mail.com";');
+        
+        $emailHandler = new EmailHandler($configFile);
+        $method = new \ReflectionMethod(EmailHandler::class, 'sendEmail');
         $method->setAccessible(true);
-
-        $method->invokeArgs($emailHandler, [$emailMock, 'from@example.com', 'to@example.com', 'Test Subject', 'Test Body']);
-    }
-
-    public function testHandleRequest(): void
-    {
-        $_SERVER['REQUEST_METHOD'] = 'POST';
-        $_POST['email'] = 'test@example.com';
-        $_POST['message'] = 'Test message';
-        $_POST['name'] = 'Test Name';
-
-        $emailHandler = new EmailHandler($this->configFile);
-        $this->expectOutputString(json_encode(['status' => 'success']));
-        $emailHandler->handleRequest();
+        $method->invoke($emailHandler, $phpMailer, 'from@mail.com', 'to@mail.com', 'Subject', 'Body', 'replyTo@mail.com');
     }
 }

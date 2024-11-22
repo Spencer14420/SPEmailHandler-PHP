@@ -42,7 +42,7 @@ class EmailHandler
         $this->captchaVerifier = new CaptchaVerifier($this->captchaSecret, $this->captchaVerifyURL);
     }
 
-    private function validateAndSetEmail(string $emailVar, string $emailVarName = "A configuration variable", ?string $defaultEmail = null): string
+    private function validateAndSetEmail(?string $emailVar, string $emailVarName = "A configuration variable", ?string $defaultEmail = null): string
     {
         if (empty($emailVar) && $defaultEmail) {
             $emailVar = $defaultEmail;

@@ -24,6 +24,10 @@ class EmailHandler
 
     public function __construct(string $configFile)
     {
+        if (!file_exists($configFile)) {
+            throw new \RuntimeException("Configuration file not found: {$configFile}");
+        }
+        
         require_once $configFile;
 
         // Set default and validate email variables

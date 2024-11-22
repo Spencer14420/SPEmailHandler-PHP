@@ -24,7 +24,7 @@ final class EmailHandlerTest extends TestCase
         unlink($configFile);
    }
 
-   public function testConstructorInvalidConfigFile(): void 
+   public function testConstructorInvalidConfigFile(): void
    {
         $this->expectException(\Error::class);
         $configFile = __DIR__ . '/invalid_config.php';

@@ -158,7 +158,7 @@ class EmailHandler
             $this->fromEmail,
             $email,
             "Your message to $this->siteName has been received",
-            "Dear $name ($email),\n\nYour message (shown below) has been received. We will get back to you as soon as possible.\n\nSincerely,\n$this->siteName\n\nPlease note: This message was sent to the email address provided in our contact form. If you did not enter your email, please disregard this message.\n\nYour message:\n$message",
+            "Your message has been received. We will get back to you as soon as possible.\n\nSincerely,\n$this->siteName\n\nPlease note: This message was sent to the email address provided in our contact form. If you did not enter your email, please disregard this message.",
             $this->replyToEmail
         );
 

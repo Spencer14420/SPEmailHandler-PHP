@@ -93,7 +93,7 @@ class EmailHandler
         }
 
         $csrfVerifier = new AntiCsrf();
-        if (!$csrfVerifier->tokenIsValid($this->csrfToken)) {
+        if ($this->csrfToken !== null && !$csrfVerifier->tokenIsValid($this->csrfToken)) {
             $this->jsonErrorResponse("Error: There was an issue with your session. Please refresh the page and try again.", 403);
         }
     }

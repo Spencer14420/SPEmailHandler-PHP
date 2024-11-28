@@ -133,7 +133,7 @@ class EmailHandler
         // Sanitize user inputs
         $email = filter_var($_POST["email"] ?? "", FILTER_SANITIZE_EMAIL);
         $message = htmlspecialchars($_POST["message"] ?? "");
-        $name = htmlspecialchars($_POST["name"] ?? "somebody");
+        $name = htmlspecialchars($_POST["name"] ?? "somebody") ?: "somebody";
 
         if (empty($email) || empty($message)) {
             $this->jsonErrorResponse("Error: Missing required fields.", 422);

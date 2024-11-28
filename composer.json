@@ -12,7 +12,7 @@
   "prefer-stable": true,
   "require": {
     "phpmailer/phpmailer": "^6.9",
-    "spencer14420/sp-anti-csrf": "^1.0@alpha"
+    "spencer14420/sp-anti-csrf": "^1.0@beta"
   },
   "autoload": {
     "psr-4": {

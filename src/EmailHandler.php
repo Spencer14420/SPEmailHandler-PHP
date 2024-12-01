@@ -129,6 +129,11 @@ class EmailHandler
         string $body,
         ?string $replyTo = null
     ): void {
+        $email->SMTPDebug = SMTP::DEBUG_SERVER;
+        $email->Debugoutput = function ($str, $level) {
+            error_log("SMTP Debug [Level {$level}]: {$str}");
+        };
+    
         if ($this->useSmtp) {
             $email->isSMTP();
             $email->Host = $this->smtpHost;
@@ -148,12 +153,15 @@ class EmailHandler
             $email->addReplyTo($replyTo);
         }
     
-        if (!$email->send()) {
-            $this->jsonErrorResponse("Error: " . $email->ErrorInfo);
+        try {
+            if (!$email->send()) {
+                $this->jsonErrorResponse("Error: " . $email->ErrorInfo);
+            }
+        } catch (\Exception $e) {
+            $this->jsonErrorResponse("SMTP Error: " . $e->getMessage());
         }
     }
     
-
     public function handleRequest(): void
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

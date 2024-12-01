@@ -136,20 +136,23 @@ class EmailHandler
             $email->SMTPAuth = true;
             $email->Username = $this->smtpUsername;
             $email->Password = $this->smtpPassword;
+            $email->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         }
+    
         $email->setFrom($from, $this->siteName);
         $email->addAddress($to);
         $email->Subject = $subject;
         $email->Body = $body;
-
+    
         if ($replyTo) {
             $email->addReplyTo($replyTo);
         }
-
+    
         if (!$email->send()) {
             $this->jsonErrorResponse("Error: " . $email->ErrorInfo);
         }
     }
+    
 
     public function handleRequest(): void
     {

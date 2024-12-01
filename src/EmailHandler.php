@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace spencer14420\PhpEmailHandler;
 
 use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
 use spencer14420\PhpEmailHandler\CaptchaVerifier;
 use spencer14420\SpAntiCsrf\AntiCsrf;
 
@@ -21,6 +22,11 @@ class EmailHandler
     private $captchaVerifier;
     private $checkCsrf;
     private $csrfToken;
+    private $smtpHost;
+    private $smtpPort;
+    private $smtpUsername;
+    private $smtpPassword;
+    private $useSmtp;
 
     public function __construct(string $configFile)
     {
@@ -44,6 +50,15 @@ class EmailHandler
         $this->checkCsrf = $checkCsrf ?? false;
         $this->csrfToken = $csrfToken ?? null;
         $this->captchaVerifier = new CaptchaVerifier($this->captchaSecret, $this->captchaVerifyURL);
+        $this->smtpHost = $this->isValidString($smtpHost) ? $smtpHost : null;
+        $this->smtpPort = $this->isValidPort($smtpPort) ? $smtpPort : null;
+        $this->smtpUsername = $this->isValidString($smtpUsername) ? $smtpUsername : null;
+        $this->smtpPassword = $this->isValidString($smtpPassword) ? $smtpPassword : null;
+
+        $this->useSmtp = $this->smtpHost !== null 
+            && $this->smtpPort !== null 
+            && $this->smtpUsername !== null 
+            && $this->smtpPassword !== null;
     }
 
     private function validateAndSetEmail(?string $emailVar, string $emailVarName = "A configuration variable", ?string $defaultEmail = null): string
@@ -57,6 +72,14 @@ class EmailHandler
         }
         
         return $emailVar;
+    }
+
+    private function isValidString($value): bool {
+        return is_string($value) && !empty($value);
+    }
+
+    private function isValidPort($value): bool {
+        return is_int($value) && $value > 0;
     }
 
     private function jsonErrorResponse(string $message = "An error occurred. Please try again later.", int $code = 500): void
@@ -106,6 +129,14 @@ class EmailHandler
         string $body,
         ?string $replyTo = null
     ): void {
+        if ($this->useSmtp) {
+            $email->isSMTP();
+            $email->Host = $this->smtpHost;
+            $email->Port = $this->smtpPort;
+            $email->SMTPAuth = true;
+            $email->Username = $this->smtpUsername;
+            $email->Password = $this->smtpPassword;
+        }
         $email->setFrom($from, $this->siteName);
         $email->addAddress($to);
         $email->Subject = $subject;
@@ -119,7 +150,6 @@ class EmailHandler
             $this->jsonErrorResponse("Error: " . $email->ErrorInfo);
         }
     }
-
 
     public function handleRequest(): void
     {
